@@ -40,7 +40,7 @@ impl Chromosome {
     }
 
     // return string representation of chromosome
-    pub fn to_string(&self) -> String {
+    pub fn _to_string(&self) -> String {
         let mut s = String::new();
         for i in 0..self.genes.len() {
             s.push(self.genes[i].to_string().chars().next().unwrap());

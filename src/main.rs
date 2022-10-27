@@ -1,33 +1,35 @@
-use std::ptr::null;
+use std::env;
 
 mod chromosome;
 
-static CHROMOSOME_SIZE: usize = 100;
-
 fn main() {
-    // an array of chromosomes of size 100
+    let args: Vec<String> = env::args().collect();
+    if args.len() < 5 {
+        println!("Usage: <population size> <selection method> <crossover rate> <mutation rate> <chromosome length>");
+        return;
+    }
+
+    let pop_size = *&args[1].parse::<usize>().unwrap();
+    let selection = *&args[2].parse::<i8>().unwrap();
+    let crossover_rate = *&args[3].parse::<f64>().unwrap();
+    let mutation_rate = *&args[4].parse::<f64>().unwrap();
+    let chromosome_size = *&args[5].parse::<usize>().unwrap();
+
+    println!("Population size: {}\nSelection method (0: proportional, 1: tournament): {}\nCrossover rate: {}\nMutation rate: {}\nChromosome length: {}\n", pop_size, selection, crossover_rate, mutation_rate, chromosome_size);
+
     let mut population;
     let mut new_population = Vec::new();
-    // desired fitness int 20
-    let desired_fitness = CHROMOSOME_SIZE as i32;
-    // population size
-    let pop_size = 100;
-    // percent crossover
-    let crossover_rate = 0.5;
-    // percent mutation
-    let mutation_rate = 0.01;
-    // current generation
     let mut generation = 0;
-    let selection = 0 as i8;
+    let desired_fitness = chromosome_size as i32;
 
     println!("Initializing population...");
     // get start time
     let now = std::time::Instant::now();
-    population = initialize_population(pop_size);
+    population = initialize_population(pop_size, chromosome_size);
 
     let mut best_fitness = 0 as i32;
 
-    println!("Population initialized. Starting evolution...");
+    println!("Population initialized. Starting evolution...\n");
     // loop until we find a chromosome with fitness of 20
     while best_fitness < desired_fitness {
         while new_population.len() < pop_size as usize {
@@ -41,20 +43,22 @@ fn main() {
                 parent2 = tournament_selection(&population, pop_size);
                 parent1 = tournament_selection(&population, pop_size);
             }
-            if parent1.genes.len() < 0 || parent2.genes.len() < 0 {
+
+            if parent1.genes.len() == 0 || parent2.genes.len() == 0 {
                 continue;
             }
+
             // random float between 0 and 1
             let mut random = rand::random::<f64>();
             if random < crossover_rate {
-                crossover(&mut parent1, &mut parent2);
+                crossover(&mut parent1, &mut parent2, chromosome_size);
             }
 
             // random float between 0 and 1
             random = rand::random::<f64>();
             if random < mutation_rate {
-                mutate(&mut parent1);
-                mutate(&mut parent2);
+                mutate(&mut parent1, chromosome_size);
+                mutate(&mut parent2, chromosome_size);
             }
 
             // add parents to new population
@@ -81,13 +85,13 @@ fn main() {
 }
 
 // initialize population function
-fn initialize_population(pop_size: usize) -> Vec<chromosome::Chromosome> {
+fn initialize_population(pop_size: usize, chromosome_size: usize) -> Vec<chromosome::Chromosome> {
     let mut population: Vec<chromosome::Chromosome> = Vec::new();
     for _ in 0..pop_size {
         let mut cr = chromosome::Chromosome::new();
         // temp array of 20 random genes
         let mut genes: Vec<u32> = Vec::new();
-        for _ in 0..CHROMOSOME_SIZE {
+        for _ in 0..chromosome_size {
             // random int 0-1
             let r = rand::random::<u32>() % 2;
             genes.push(r);
@@ -133,13 +137,13 @@ fn proportional_selection(population: &Vec<chromosome::Chromosome>, pop_size: us
 }
 
 // crossover return both parents
-fn crossover(parent1: &mut chromosome::Chromosome, parent2: &mut chromosome::Chromosome) {
+fn crossover(parent1: &mut chromosome::Chromosome, parent2: &mut chromosome::Chromosome, chromosome_size: usize) {
     // random int between 0 and 19
-    let r = rand::random::<usize>() % CHROMOSOME_SIZE;
+    let r = rand::random::<usize>() % chromosome_size;
     let mut parent1_new: Vec<u32> = Vec::new();
     let mut parent2_new: Vec<u32> = Vec::new();
     // take parent1 genes up to r and parent2 genes after r
-    for i in 0..CHROMOSOME_SIZE {
+    for i in 0..chromosome_size {
         if i < r {
             parent1_new.push(parent1.genes[i]);
             parent2_new.push(parent2.genes[i]);
@@ -153,9 +157,9 @@ fn crossover(parent1: &mut chromosome::Chromosome, parent2: &mut chromosome::Chr
 }
 
 // mutation
-fn mutate(chromosome: &mut chromosome::Chromosome) {
+fn mutate(chromosome: &mut chromosome::Chromosome, chromosome_size: usize) {
     // random int between 0 and 19
-    let r = rand::random::<usize>() % CHROMOSOME_SIZE;
+    let r = rand::random::<usize>() % chromosome_size;
     // flip the gene
     if chromosome.get_gene(r) == 0 {
         chromosome.set_gene(r, 1);
