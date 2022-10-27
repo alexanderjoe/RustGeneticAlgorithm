@@ -1,4 +1,7 @@
 use std::env;
+use std::error::Error;
+use csv::Writer;
+use std::fs::OpenOptions;
 
 mod chromosome;
 
@@ -75,6 +78,9 @@ fn main() {
         if generation % 5000 == 0 {
             println!("Generation: {}, Best Fitness: {}", generation, best.get_fitness());
         }
+        if generation % 100 == 0 {
+            let _ = write_to_file(&population, generation);
+        }
         generation += 1;
         best_fitness = best.get_fitness();
     }
@@ -83,6 +89,21 @@ fn main() {
     println!("\nTime to reach desired fitness: {:?}, Avg time per generation {:?}", duration, (duration / generation));
     println!("Best generation was {} with a fitness of {}", generation, best_fitness);
     // avg time per generation
+}
+
+fn write_to_file(population: &Vec<chromosome::Chromosome>, generation: u32) -> Result<(), Box<dyn Error>> {
+    // open file in append mode
+    let mut file = OpenOptions::new()
+        .write(true)
+        .append(true)
+        .open(format!("data/{}.csv", std::time::SystemTime::now()))?
+        .unwrap();
+
+    let mut writer = Writer::from_writer(file);
+    let (avg, min, max) = get_population_stats(population);
+    writer.write_record(&[generation.to_string(), avg.to_string(), min.to_string(), max.to_string()])?;
+    writer.flush()?;
+    Ok(())
 }
 
 // initialize population function
@@ -169,7 +190,6 @@ fn mutate(chromosome: &mut chromosome::Chromosome, chromosome_size: usize) {
     }
 }
 
-
 // get populations best fitness
 fn get_most_fit(population: &mut Vec<chromosome::Chromosome>) -> chromosome::Chromosome {
     let mut best_fitness = 0;
@@ -182,4 +202,23 @@ fn get_most_fit(population: &mut Vec<chromosome::Chromosome>) -> chromosome::Chr
         }
     }
     best_chromosome
+}
+
+// get population statistics
+fn get_population_stats(population: &Vec<chromosome::Chromosome>) -> (f64, i64, i64) {
+    let mut sum = 0 as f64;
+    let mut min = 10000 as i64;
+    let mut max = 0 as i64;
+    for i in 0..population.len() {
+        let fitness = population[i].get_fitness() as i64;
+        sum += fitness as f64;
+        if fitness < min {
+            min = fitness;
+        }
+        if fitness > max {
+            max = fitness;
+        }
+    }
+    let avg = sum / population.len() as f64;
+    (avg, min, max)
 }
