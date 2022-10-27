@@ -80,7 +80,8 @@ fn main() {
     }
 
     let duration = now.elapsed();
-    println!("Time to reach desired fitness: {:?}, Avg time per generation {:?}", duration, (duration / generation));
+    println!("\nTime to reach desired fitness: {:?}, Avg time per generation {:?}", duration, (duration / generation));
+    println!("Best generation was {} with a fitness of {}", generation, best_fitness);
     // avg time per generation
 }
 
