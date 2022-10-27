@@ -4,8 +4,8 @@ static CHROMOSOME_SIZE: usize = 100;
 
 fn main() {
     // an array of chromosomes of size 100
-    let mut population: Vec<chromosome::Chromosome> = Vec::new();
-    let mut new_population: Vec<chromosome::Chromosome> = Vec::new();
+    let mut population;
+    let mut new_population = Vec::new();
     // desired fitness int 20
     let desired_fitness = CHROMOSOME_SIZE as i32;
     // population size
@@ -22,13 +22,7 @@ fn main() {
     let now = std::time::Instant::now();
     population = initialize_population(pop_size);
 
-    // print each chromosome in the population
-    // for i in 0..population.len() {
-    //     println!("{}: {}", i, population[i].to_string());
-    // }
-
     let mut best_fitness = 0 as i32;
-    let mut best_chromosome = chromosome::Chromosome::new();
 
     println!("Population initialized. Starting evolution...");
     // loop until we find a chromosome with fitness of 20
@@ -69,7 +63,7 @@ fn main() {
     }
 
     let duration = now.elapsed();
-    println!("{:?}", duration);
+    println!("Time to reach desired fitness: {:?}", duration);
 }
 
 // initialize population function

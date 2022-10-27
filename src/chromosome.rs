@@ -4,21 +4,14 @@ pub struct Chromosome {
 }
 
 impl Chromosome {
-    // create a getter
-    pub fn get_genes(&self) -> Vec<u32> {
-        self.genes.clone()
-    }
-    // create a setter
     pub fn set_genes(&mut self, genes: Vec<u32>) {
         self.genes = genes;
     }
 
-    // set a single gene
     pub fn set_gene(&mut self, index: usize, value: u32) {
         self.genes[index] = value;
     }
 
-    // get single gene
     pub fn get_gene(&self, index: usize) -> u32 {
         self.genes[index]
     }
@@ -38,7 +31,6 @@ impl Chromosome {
         }
     }
 
-    // calculate fitness
     pub fn calculate_fitness(&mut self) {
         let mut fitness = 0;
         for i in 0..self.genes.len() {
