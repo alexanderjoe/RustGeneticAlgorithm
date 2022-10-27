@@ -1,3 +1,5 @@
+use std::ptr::null;
+
 mod chromosome;
 
 static CHROMOSOME_SIZE: usize = 100;
@@ -16,6 +18,7 @@ fn main() {
     let mutation_rate = 0.01;
     // current generation
     let mut generation = 0;
+    let selection = 0 as i8;
 
     println!("Initializing population...");
     // get start time
@@ -27,11 +30,20 @@ fn main() {
     println!("Population initialized. Starting evolution...");
     // loop until we find a chromosome with fitness of 20
     while best_fitness < desired_fitness {
-        while new_population.len()  < pop_size as usize {
+        while new_population.len() < pop_size as usize {
             // select two parents
-            let mut parent1 = select_parent(&population, pop_size);
-            let mut parent2 = select_parent(&population, pop_size);
-
+            let mut parent1;
+            let mut parent2;
+            if selection == 0 {
+                parent1 = proportional_selection(&population, pop_size);
+                parent2 = proportional_selection(&population, pop_size);
+            } else {
+                parent2 = tournament_selection(&population, pop_size);
+                parent1 = tournament_selection(&population, pop_size);
+            }
+            if parent1.genes.len() < 0 || parent2.genes.len() < 0 {
+                continue;
+            }
             // random float between 0 and 1
             let mut random = rand::random::<f64>();
             if random < crossover_rate {
@@ -56,14 +68,16 @@ fn main() {
 
         let best = get_most_fit(&mut population);
         // print best
-        println!("Generation {}: {}", generation, best.to_string());
-        println!("Generation: {}, Best Fitness: {}", generation, best.get_fitness());
+        if generation % 5000 == 0 {
+            println!("Generation: {}, Best Fitness: {}", generation, best.get_fitness());
+        }
         generation += 1;
         best_fitness = best.get_fitness();
     }
 
     let duration = now.elapsed();
-    println!("Time to reach desired fitness: {:?}", duration);
+    println!("Time to reach desired fitness: {:?}, Avg time per generation {:?}", duration, (duration / generation));
+    // avg time per generation
 }
 
 // initialize population function
@@ -85,7 +99,7 @@ fn initialize_population(pop_size: usize) -> Vec<chromosome::Chromosome> {
     population
 }
 
-fn select_parent(population: &Vec<chromosome::Chromosome>, pop_size: usize) -> chromosome::Chromosome {
+fn tournament_selection(population: &Vec<chromosome::Chromosome>, pop_size: usize) -> chromosome::Chromosome {
     // use tournament selection
     let mut tournament: Vec<chromosome::Chromosome> = Vec::new();
     // add random chromosomes to the tournament
@@ -98,6 +112,24 @@ fn select_parent(population: &Vec<chromosome::Chromosome>, pop_size: usize) -> c
     tournament.sort_by(|a, b| b.fitness.cmp(&a.fitness));
     // return the best chromosome
     tournament[0].clone()
+}
+
+// weighted roulette wheel selection
+fn proportional_selection(population: &Vec<chromosome::Chromosome>, pop_size: usize) -> chromosome::Chromosome {
+    let mut sum = 0 as u32;
+    for i in 0..pop_size {
+        sum += population[i].fitness as u32;
+    }
+
+    let r = rand::random::<u32>() % sum;
+    let mut count = 0 as u32;
+    for j in 0..pop_size {
+        count += population[j].fitness as u32;
+        if count >= r {
+            return population[j].clone();
+        }
+    }
+    chromosome::Chromosome::new()
 }
 
 // crossover return both parents
