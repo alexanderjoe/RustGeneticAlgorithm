@@ -1,7 +1,8 @@
 use std::env;
 use std::error::Error;
 use csv::Writer;
-use std::fs::OpenOptions;
+use std::fs::{File, OpenOptions};
+use chrono::prelude::*;
 
 mod chromosome;
 
@@ -12,6 +13,7 @@ fn main() {
         return;
     }
 
+    // get command line arguments
     let pop_size = *&args[1].parse::<usize>().unwrap();
     let selection = *&args[2].parse::<i8>().unwrap();
     let crossover_rate = *&args[3].parse::<f64>().unwrap();
@@ -20,21 +22,39 @@ fn main() {
 
     println!("Population size: {}\nSelection method (0: proportional, 1: tournament): {}\nCrossover rate: {}\nMutation rate: {}\nChromosome length: {}\n", pop_size, selection, crossover_rate, mutation_rate, chromosome_size);
 
+    // mutable variables
     let mut population;
     let mut new_population = Vec::new();
     let mut generation = 0;
+    let mut best_fitness: i32 = 0;
+
+
+    // computed variables
     let desired_fitness = chromosome_size as i32;
+    let local: DateTime<Local> = Local::now();
+    let filename = format!("{}-{}-{}-{}-{}-{}-{}.csv", local.year(), local.month(), local.day(), local.hour(), local.minute(), local.second(), local.nanosecond());
+
+    // setup csv file
+    println!("Writing to file: {}", filename);
+    let _ = File::create(&filename).unwrap();
+    let file: File = OpenOptions::new()
+        .write(true)
+        .append(true)
+        .open(filename)
+        .unwrap();
 
     println!("Initializing population...");
+
     // get start time
     let now = std::time::Instant::now();
+
+    // get initial population
     population = initialize_population(pop_size, chromosome_size);
-
-    let mut best_fitness = 0 as i32;
-
     println!("Population initialized. Starting evolution...\n");
-    // loop until we find a chromosome with fitness of 20
+
+    // loop until we find a chromosome with the desired fitness
     while best_fitness < desired_fitness {
+        // loop until we fill the new population with children
         while new_population.len() < pop_size as usize {
             // select two parents
             let mut parent1;
@@ -47,20 +67,26 @@ fn main() {
                 parent1 = tournament_selection(&population, pop_size);
             }
 
+            // if either parent is null continue
             if parent1.genes.len() == 0 || parent2.genes.len() == 0 {
                 continue;
             }
 
             // random float between 0 and 1
             let mut random = rand::random::<f64>();
+            // check if crossover should occur
             if random < crossover_rate {
                 crossover(&mut parent1, &mut parent2, chromosome_size);
             }
 
-            // random float between 0 and 1
+            // check both parents for mutation
             random = rand::random::<f64>();
             if random < mutation_rate {
                 mutate(&mut parent1, chromosome_size);
+            }
+
+            random = rand::random::<f64>();
+            if random < mutation_rate {
                 mutate(&mut parent2, chromosome_size);
             }
 
@@ -74,12 +100,11 @@ fn main() {
         new_population.clear();
 
         let best = get_most_fit(&mut population);
-        // print best
-        if generation % 5000 == 0 {
+        if generation % 100 == 0 {
             println!("Generation: {}, Best Fitness: {}", generation, best.get_fitness());
         }
-        if generation % 100 == 0 {
-            let _ = write_to_file(&population, generation);
+        if generation % 10 == 0 {
+            let _ = write_to_file(&population, generation, &file);
         }
         generation += 1;
         best_fitness = best.get_fitness();
@@ -91,14 +116,7 @@ fn main() {
     // avg time per generation
 }
 
-fn write_to_file(population: &Vec<chromosome::Chromosome>, generation: u32) -> Result<(), Box<dyn Error>> {
-    // open file in append mode
-    let mut file = OpenOptions::new()
-        .write(true)
-        .append(true)
-        .open(format!("data/{}.csv", std::time::SystemTime::now()))?
-        .unwrap();
-
+fn write_to_file(population: &Vec<chromosome::Chromosome>, generation: u32, file: &File) -> Result<(), Box<dyn Error>> {
     let mut writer = Writer::from_writer(file);
     let (avg, min, max) = get_population_stats(population);
     writer.write_record(&[generation.to_string(), avg.to_string(), min.to_string(), max.to_string()])?;
